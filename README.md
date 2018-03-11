@@ -4,17 +4,15 @@
 
 ### R and the R Community
 
-### Data Science Workflow
+### Productivity to Reproductivity
 
 ### Wrangle
 
 ### Rectangle
 
-### Narrative
+### Chronicle
 
-### But Wait, There's More!
-
-### Additional Resources
+### Learn More About R
 
 ## Part 2: RStudio + Keras + Tensorflow
 
@@ -22,13 +20,13 @@
 
 ### Hello, Keras
 
-### Binary Classification
+### Feeling Validated
 
-### Publish Results
+### The Plots Thicken (TFRuns)
 
-### Deep Learning is People
+### Tidy and Share (TFDatasets + TFEstimators)
 
-### Additional Resources
+### Learn More about R + Tensorflow
  
 ## Appendix
  
