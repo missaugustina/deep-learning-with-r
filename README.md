@@ -4,15 +4,15 @@
 
 Goal: Improve your research workflow - be more productive (and reproductive).
 
-## R and the R Community
+## Hello, R
 
 ## (Data) Science is a Verb
 
-## Wrangle
+### Wrangle
 
-## Rectangle
+### Rectangle
 
-## Chronicle
+### Chronicle
 
 ## Learn More About R
 
