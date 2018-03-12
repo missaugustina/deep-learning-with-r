@@ -1,0 +1,23 @@
+---
+title: "Hello, R"
+output: html_notebook
+---
+
+# What is R?
+
+# ouR Community
+
+R Foundation, R Consortium
+Meetups: useR chapters, R-Ladies
+
+# Some Basics
+
+See 01a-hello-r-intro_stats_r_lab1.Rmd
+
+## Thinking in Rectangles
+
+When we start working with Tensorflow in the next section, we'll need to think in other shapes but for now we'll stick with 2 dimensions.
+
+# Conclusion
+
+We've introduced the R community and given you a taste of the R language. Next we'll look at it in context of doing real data science.

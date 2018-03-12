@@ -1,0 +1,294 @@
+---
+title: "Hello, keras"
+output: html_notebook
+---
+
+# Library
+
+We're using RStudio's Keras Library.
+
+```{r includes}
+library(keras)
+```
+
+# The Question
+
+Can we identify single digit numbers from hand-writing?
+
+In this example, we are essentially testing the results of another research effort ^[[Y. LeCun, L. Bottou, Y. Bengio, and P. Haffner. "Gradient-based learning applied to document recognition." Proceedings of the IEEE, 86(11):2278-2324, November 1998.(http://yann.lecun.com/exdb/publis/index.html#lecun-98)]. 
+
+# The Data - MNIST (Modified National Institute of Standards and Technology) database
+
+The MNIST is a collection of handwritten, single-digit numbers. To learn more, [read the Wikipedia entry](https://en.wikipedia.org/wiki/MNIST_database).
+
+## How do we get it?
+
+The `dataset_mnist()` function fetches a formatted archive of the MNIST database that can be consumed in R. This function will cache the dataset locally by default by saving it in ~/.keras/datasets.
+
+```{r model}
+mnist <- dataset_mnist()
+```
+
+## What's in it?
+
+![Josef Steppan - Own work, CC BY-SA 4.0, https://commons.wikimedia.org/w/index.php?curid=64810040](img/MnistExamples.png)
+
+```{r}
+str(mnist)
+```
+
+## How do we cite it?
+
+One shortcoming of the `dataset_mnist()` function is it does not provide a citation entry. In R, datasets are often provided as standalone packages that can be cited using the `citations()` function.
+
+LeCun, Yann; Corinna Cortes; Christopher J.C. Burges. (1998). MNIST handwritten digit database [Data file]. Retrieved from https://s3.amazonaws.com/img-datasets/mnist.npz
+
+ * Author/Rightsholder. (Year). Title of data set (Version number) [Description of form]. Retrieved from (url) ^[[Per APA Guildelines](http://guides.lib.umich.edu/c.php?g=439304&p=2993299)] 
+ * [Use RMarkdown to generate bibliography](https://rmarkdown.rstudio.com/authoring_bibliographies_and_citations.html)
+ * [Use citations() for packages](https://stat.ethz.ch/R-manual/R-devel/library/utils/html/citation.html)
+
+Why do you think citing your data sources is important?
+
+# Data Format
+
+We have two lists, labels and images. Labels and images have a 1:1 mapping.
+
+```{r}
+train_images <- mnist$train$x
+train_labels <- mnist$train$y
+```
+
+When dealing with most data, the lists need to be vectorized into a binary matrix, aka a Tensor. 
+ 
+What kind of Tensor are we using?
+
+```{r training-set-images}
+paste("How many dimensions does this tensor have?")
+length(dim(train_images))
+
+paste("What shape does this tensor have?")
+dim(train_images)
+
+paste("What datatype does this tensor have?")
+typeof(train_images)
+
+```
+
+What's actually in the dataset?
+
+The first axis (or dimension) is known as the sample axis.
+
+```{r}
+# grab a random index from the "batch" index (the first axis)
+digit_index <- sample.int(length(train_images[1,,]), 1) 
+digit <- train_images[digit_index,,] # <- one slice of tensor please :)
+
+plot(as.raster(digit, max=255))
+
+```
+
+To take advantage of the features R Keras offers, our data should be formatted in a way that array_reshape() can work with.
+
+# Data Encoding
+
+A network can't "eat" the data without it being pre-digested. 
+
+3D array - image content, width, height
+ * width and height become a single value
+ * image content becomes a value between 1 and 255
+ 
+We will not discuss the "how" only the "why" so advanced apologies for the hand-waving in place of the actual math. If you want to dig deeper, see the resources mentioned at the end of this notebook.
+
+## Tensor Operations 
+
+Why a single value? Because ultimately we're trying to get to a "gradient". The gradient is the change (curve or interval) of a tensor operation. Basically it's how we contain the many dimensions into a single value. 
+
+This might be overly simplistic, but if this is a new concept or not intuitive this idea might help. Imagine how you think of someone's age that you've know for awhile. The age is representative of what has been and indicates what might be (eg, lifespan). The age is constantly changing.
+
+This value represents momentum.
+
+%*% <- can only be done on tensors with same number of elements
+
+## Tensor Reshaping
+
+Rearranging the data into something that can be used in Tensor Operations
+
+## One Hot Encoding
+
+convert to a vector of 0's and 1's where the items in the list index are 1 at the appropriate location.
+
+In this example, we transform it into a double array of shape `(60000, 28 * 28)` with values between 0 and 1.
+
+```{r}
+train_images <- array_reshape(train_images, c(60000, 28 * 28))
+train_images <- train_images / 255
+```
+
+We also need to categorically encode the labels:
+
+```{r}
+train_labels <- to_categorical(train_labels)
+```
+
+What format does training data generally need to be in? This depends on your question and the methods you will use to run your experiments.
+
+# Network
+
+What are layers?
+
+Layers are representations of the data that will be chained together for the deep learnings. Basically it's how you get from many parameters to a set of probabilities. This is where the black magic happens and this complex data transformation is why transparency in deep learning is challenging.
+
+```{r}
+model <- keras_model_sequential() %>% 
+  layer_dense(units = 512, activation = "relu", input_shape = c(28 * 28)) %>% 
+  layer_dense(units = 10, activation = "softmax")
+```
+
+## Relu
+
+Transformation happens with the following formula:
+
+output = relu(dot W, input) + b
+
+Weights:
+
+ * W = kernel
+ * b = bias
+ 
+Initially these are random but future iterations will adjust based on the result of a feedback function we'll discuss in the next section.
+
+# Compile
+
+What does it mean to compile a model? What does compile actually do?
+
+R's keras is an interface to the Python library, so the model is not fully "stored" in R. Compile sets additional attributes in the Python representation of the model. Anytime you change a model attribute you must run compile to update the Python representation of the model or else the changes won't be reflected when you go to train it.
+
+The model needs three things before we can train it:
+
+ 1. how it will measure its performance as it trains
+ 1. what it will measure ^^ 
+ 1. how it will update itself in response to its measure of its own performance
+ 
+Note that you can specify these when you initialize the model above, there is no need to separate them. It's just done so here because a) the thing I'm referencing did it and b) to break it up conceptually for teaching.
+
+```{r}
+model %>% compile(
+  optimizer = "rmsprop",
+  loss = "categorical_crossentropy",
+  metrics = c("accuracy")
+)
+```
+
+## Optimizer
+
+You can see a list of available optimizers in R keras by searching the Help for "optimizer_"
+
+rmsprop
+
+## Loss Function
+
+categorical_crossentropy
+
+## Metrics
+
+accuracy
+
+## Serializing
+
+This isn't a necessary step but it's kind of neat to "see" what the model looks like.
+
+By default the model will print layer metadata.
+```{r}
+model
+```
+
+To see a layer, we can call it by name.
+
+```{r eval=FALSE}
+# replace the "" with the name of one of the layers printed in the previous step
+get_layer(model, name="")
+```
+
+We can also get the weights.
+
+```{r}
+get_weights(model)
+```
+
+You can save it in human-readable form using either YAML or JSON.
+
+```{r}
+write(model_to_yaml(cmp_model), "cmp_model.yaml")
+```
+
+The human-readable options for serializing the models don't include all of the information. The serialize_model command actually calls the Keras Python library to get the data that is not immediately available within the R objects.
+
+All options are not included by default, however, such as the optimizer. You need to explicitely indicate what additional attributes you want included. When might this be useful?
+
+```{r}
+cmp_model <- model
+write(serialize_model(cmp_model), "cmp_model.txt")
+```
+
+# Train 
+
+What is the probability that the image belongs to one of the 10 different categories?
+
+## Setting Data Aside for Validation
+
+Before you train your model on your dataset, you should to put some of your data aside for the validation process later. We will talk in more detail about that, otherwise it's just too many concepts to keep track of in the short term memory banks.
+
+fit - train model for fixed number of iterations, returns a "history" object with all info collected during training
+
+```{r, echo=TRUE, results='hide'}
+history <- model %>% fit(train_images, train_labels, epochs = 5, batch_size = 128)
+```
+
+# Validation
+
+## Test Data
+
+You typically don't want to test your model on the same data its already been trained on. You can think of this as the "control group". That said, there are methods that can be used when the test set and the training set overlap or are the same.
+
+Set some aside for later. In this case, the dataset already had samples set aside for testing. Normally you will need to make a decision early on and pull those samples out before your training run.
+
+Different methods/approaches.
+
+Sample approach
+
+K-test approach
+
+```{r testing-set-images}
+test_images <- mnist$test$x
+test_images <- array_reshape(test_images, c(10000, 28 * 28))
+test_images <- test_images / 255
+```
+
+```{r testing-set-labels}
+test_labels <- mnist$test$y
+test_labels <- to_categorical(test_labels)
+```
+
+What does evaluate do?
+
+```{r}
+metrics <- model %>% evaluate(test_images, test_labels, verbose = 0)
+metrics
+```
+
+```{r}
+history$metrics
+```
+
+
+
+
+
+
+
+
+
+
+
+
+

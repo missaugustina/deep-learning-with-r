@@ -1,0 +1,82 @@
+---
+title: "02-data-science-is-a-verb.Rmd"
+author: "Augustina Ragwitz"
+date: !r Sys.Date()
+output: html_document
+params:
+  meetup_api_key: !r Sys.getenv("API_KEY_MEETUP_RLADIES")
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(purrr)
+library(tidyr)
+```
+
+# Wrangle + Rectangle
+
+In R, a lot of tools let you do this in one step because the authors know that's where you're heading.
+
+## From API
+
+## From Webpage (HTML)
+
+```{r}
+download.file("https://www.meetup.com/topics/", "downloads/meetup_topics.html")
+```
+
+```{r}
+library(rvest)
+
+topics_html <- read_html("downloads/meetup_topics.html")
+
+# Find the node by manually browsing the web page and using Developer Tools to view the page source.
+topics <- topics_html %>% 
+  html_nodes("#meetupBody > div.view > section:nth-child(34) > div > ul")
+
+links <- topics %>% 
+  html_nodes("li > a") %>%
+  html_attr("href")
+
+names <- topics %>% 
+  html_nodes("li > a") %>%
+  html_text()
+
+topics_df <- data_frame(links=links, names=names)
+
+```
+
+## From PDF
+
+What industry codes should be included in "Tech Industry"?
+
+Paytas, Jerry, and Dan Berglund. "Technology industries and occupations for NAICS industry data." Pittsburgh: Carnegie Mellon Center for Economic Development and State Science and Technology Institute (2004). http://ssti.org/report-archive/NAICS_Tech1.pdf
+
+Markusen, Ann, et al. "Gauging Metropolitan “High-Tech” and “I-Tech” Activity." Minneapolis, MN (2001). https://s3.amazonaws.com/academia.edu.documents/34059711/hightech.pdf
+
+
+```{r naics_tech_codes_download, echo=FALSE}
+download.file("http://ssti.org/report-archive/NAICS_Tech1.pdf", "downloads/ssti_naics_tech_codes.pdf")
+```
+
+```{r extract_pdf_table}
+library(tabulizer)
+
+naics_extracts <- extract_tables("downloads/ssti_naics_tech_codes.pdf",
+                                  pages=c(4), method="data.frame") %>%
+  reduce(bind_rows)
+
+```
+
+
+# Chronicle
+
+You should tell a story!
+
+Use complete sentences!
+
+Examples...

@@ -1,0 +1,14 @@
+---
+title: "Tidy + Share"
+output: html_notebook
+---
+
+# Library
+
+We're using RStudio's Keras Library.
+
+```{r includes}
+library(keras)
+```
+
+TODO: just link resources on RStudio's page for now
