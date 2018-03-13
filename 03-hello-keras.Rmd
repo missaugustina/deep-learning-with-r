@@ -112,7 +112,7 @@ Rearranging the data into something that can be used in Tensor Operations
 
 ## One Hot Encoding
 
-convert to a vector of 0's and 1's where the items in the list index are 1 at the appropriate location.
+Convert to a vector of 0's and 1's where the items in the list index are 1 at the appropriate location.
 
 In this example, we transform it into a double array of shape `(60000, 28 * 28)` with values between 0 and 1.
 
@@ -129,21 +129,15 @@ train_labels <- to_categorical(train_labels)
 
 What format does training data generally need to be in? This depends on your question and the methods you will use to run your experiments.
 
-# Network
+# The Model (aka Network)
 
 The next step in this process is to define our question in terms the model can understand. To do this we'll use layer functions where each layer function will perform a mathmatical transformation on the dataset and provide a result in a format that lets us "answer" our question.
 
 So our question is, "Can we identify single digit numbers from hand-writing?" We need to simplify this for our model, as is typical when testing hypothesis. The question we have for the model is "What number is in this picture?"
 
-Models, however, are not going to give us a simple yes or no. Think of it more like a Zen Guru. The final output the model will provide is, given all of the categories, here's the probability that this picture represents them.
+Models, however, are not going to give us a simple yes or no. Think of it more like a Zen Guru. The final output the model will provide is, given all of the categories, here's the probability that the number is in this picture. It's up to us to interpret the results.
 
-## Layers
-
-What are layers?
-
-Layers are representations of the data that will be chained together for the deep learnings. As each layer function is applied to the dataset, the result then goes to the next layer function we've defined. 
-
-Ultimately, we want to get from many parameters to a set of probabilities. This is where the black magic happens and this complex data transformation is why transparency in deep learning is challenging.
+Here's the first bit of code to set up our model.
 
 ```{r}
 model <- keras_model_sequential() %>% # initialize our model using a pre-baked model type (thanks R keras!)
@@ -153,7 +147,19 @@ model <- keras_model_sequential() %>% # initialize our model using a pre-baked m
 
 ## keras_model_sequential
 
-## layer_dense
+Pre-baked models
+
+## Layers
+
+What are layers?
+
+Layers are representations of the data that will be chained together for the deep learnings. As each layer function is applied to the dataset, the result then goes to the next layer function we've defined. 
+
+Ultimately, we want to get from many parameters to a set of probabilities. This is where the black magic happens and this complex data transformation is why transparency in deep learning is challenging.
+
+### Types of Layers
+
+layer_dense vs layer_conv_2d
  
  * units
  * activation
@@ -163,9 +169,7 @@ model <- keras_model_sequential() %>% # initialize our model using a pre-baked m
 
 Relu performs operations on each entry of the tensors being considered and takes the maximum value.
 
-Transformation happens with the following formula:
-
-output = relu(dot(W, input) + b)
+Transformation happens with the following formula: `output = relu(dot(W, input) + b)`
 
 What are the pieces?
 
@@ -194,6 +198,8 @@ basic_relu <- function(my_2d_tensor) {
 
 ## Softmax
 
+The final layer uses a different transformation than the rest of them.
+
 ## Another Thing to Try
 
 Internally, R provides a special set of optimized functions for array operations like the ones used for relu. These are implemented using "BLAS" (Basic Linear Algebra Subprograms). 
@@ -201,7 +207,7 @@ Internally, R provides a special set of optimized functions for array operations
 Once we've run through the example using relu, can you tweak it to use BLAS instead? Do you see any improvements?
 
 
-# Compile
+## Compile
 
 What does it mean to compile a model? What does compile actually do?
 
@@ -227,7 +233,7 @@ model %>% compile(
 
 You can see a list of available optimizers in R keras by searching the Help for "optimizer_"
 
-rmsprop
+RMSProp
 
 ## Loss Function
 
@@ -293,6 +299,10 @@ cmp_model <- model
 write(serialize_model(cmp_model), "cmp_model.txt")
 ```
 
+## So What Have We Got?
+
+The model we've built is a small covnet. It is sa stack of alternated 2d layers with relu activation
+
 # Train 
 
 What is the probability that the image belongs to one of the 10 different categories?
@@ -304,6 +314,15 @@ fit - train model for fixed number of iterations, returns a "history" object wit
 ```{r, echo=TRUE, results='hide'}
 history <- model %>% fit(train_images, train_labels, epochs = 5, batch_size = 128)
 ```
+
+## Saving the Model
+
+```{r}
+save_model_hdf5()
+
+save_model_weights_hdf5()
+```
+
 
 # Validation
 
@@ -329,6 +348,26 @@ metrics
 ```{r}
 history$metrics
 ```
+
+## Visualizing the results
+
+This plot shows the curve of loss and the accuracy during training
+
+```{r}
+plot(history)
+```
+
+p 153 -> visualize convnet
+
+# Run the Example
+
+# Next Steps
+
+ * use 2d convnet instead of dense (p112) 
+
+# Deepen your Learning
+
+
 
 
 
