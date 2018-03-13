@@ -76,7 +76,7 @@ typeof(train_images)
 
 What's actually in the dataset?
 
-The first axis (or dimension) is known as the sample axis.
+The first axis (or dimension) is known as the sample axis. If we take a sample out of it, we can display it using the plot function in the R keras library. R provides a function called "as.raster" that tells plot() how to render the data we're passing in.
 
 ```{r}
 # grab a random index from the "batch" index (the first axis)
@@ -84,7 +84,6 @@ digit_index <- sample.int(length(train_images[1,,]), 1)
 digit <- train_images[digit_index,,] # <- one slice of tensor please :)
 
 plot(as.raster(digit, max=255))
-
 ```
 
 To take advantage of the features R Keras offers, our data should be formatted in a way that array_reshape() can work with.
@@ -101,13 +100,11 @@ We will not discuss the "how" only the "why" so advanced apologies for the hand-
 
 ## Tensor Operations 
 
-Why a single value? Because ultimately we're trying to get to a "gradient". The gradient is the change (curve or interval) of a tensor operation. Basically it's how we contain the many dimensions into a single value. 
+Why a single value? Because ultimately we're trying to get to a "gradient". The gradient is the change (curve or interval) of a tensor operation. Basically it's how we contain the many dimensions into a single value. This value represents momentum.
 
 This might be overly simplistic, but if this is a new concept or not intuitive this idea might help. Imagine how you think of someone's age that you've know for awhile. The age is representative of what has been and indicates what might be (eg, lifespan). The age is constantly changing.
 
-This value represents momentum.
-
-%*% <- can only be done on tensors with same number of elements
+We'll talk more about this in the next step and even plot what it looks like. For now just understand that the recipe requires this to be a single value so it can do it's deep learning black magic (the Tensor dot product!).
 
 ## Tensor Reshaping
 
@@ -134,28 +131,75 @@ What format does training data generally need to be in? This depends on your que
 
 # Network
 
+The next step in this process is to define our question in terms the model can understand. To do this we'll use layer functions where each layer function will perform a mathmatical transformation on the dataset and provide a result in a format that lets us "answer" our question.
+
+So our question is, "Can we identify single digit numbers from hand-writing?" We need to simplify this for our model, as is typical when testing hypothesis. The question we have for the model is "What number is in this picture?"
+
+Models, however, are not going to give us a simple yes or no. Think of it more like a Zen Guru. The final output the model will provide is, given all of the categories, here's the probability that this picture represents them.
+
+## Layers
+
 What are layers?
 
-Layers are representations of the data that will be chained together for the deep learnings. Basically it's how you get from many parameters to a set of probabilities. This is where the black magic happens and this complex data transformation is why transparency in deep learning is challenging.
+Layers are representations of the data that will be chained together for the deep learnings. As each layer function is applied to the dataset, the result then goes to the next layer function we've defined. 
+
+Ultimately, we want to get from many parameters to a set of probabilities. This is where the black magic happens and this complex data transformation is why transparency in deep learning is challenging.
 
 ```{r}
-model <- keras_model_sequential() %>% 
-  layer_dense(units = 512, activation = "relu", input_shape = c(28 * 28)) %>% 
-  layer_dense(units = 10, activation = "softmax")
+model <- keras_model_sequential() %>% # initialize our model using a pre-baked model type (thanks R keras!)
+  layer_dense(units = 512, activation = "relu", input_shape = c(28 * 28)) %>% # define our first layer transformation
+  layer_dense(units = 10, activation = "softmax") # define the final layer transformation
 ```
+
+## keras_model_sequential
+
+## layer_dense
+ 
+ * units
+ * activation
+ * input_shape
 
 ## Relu
 
+Relu performs operations on each entry of the tensors being considered and takes the maximum value.
+
 Transformation happens with the following formula:
 
-output = relu(dot W, input) + b
+output = relu(dot(W, input) + b)
 
-Weights:
+What are the pieces?
 
+ * output = resulting tensor (what the layer function returns)
+ * input = incoming tensor, either what we start with or the result of the last layer function
+ * "W" and "b" are Weights
  * W = kernel
  * b = bias
  
 Initially these are random but future iterations will adjust based on the result of a feedback function we'll discuss in the next section.
+
+Here's an example of what relu looks like under the hood
+
+```{r}
+basic_relu <- function(my_2d_tensor) {
+  for (row in nrow(my_2d_tensor)) {
+    for (column in ncol(my_2d_tensor)) {
+      # the individual entry
+      my_2d_tensor[row, column] <- max(my_2d_tensor[row, column], 0)
+      
+    }
+  }
+}
+```
+
+
+## Softmax
+
+## Another Thing to Try
+
+Internally, R provides a special set of optimized functions for array operations like the ones used for relu. These are implemented using "BLAS" (Basic Linear Algebra Subprograms). 
+
+Once we've run through the example using relu, can you tweak it to use BLAS instead? Do you see any improvements?
+
 
 # Compile
 
@@ -192,6 +236,25 @@ categorical_crossentropy
 ## Metrics
 
 accuracy
+
+## Setting Something Aside
+
+Before you train your model on your dataset, you should to put some of your data aside for the validation process. Our dataset already includes a test set, so we'll use that for now.
+
+You can think of this as a control group. The attributes we specified above will also be used on this "pristine" set of data the model has never encountered before. We'll show what that looks like after the training step has occurred.
+
+There are different approaches to validation and not all of them require setting some data aside, because sometimes you can't. We'll touch on that when we show the results of the testing process after the training step!
+
+```{r testing-set-images}
+test_images <- mnist$test$x
+test_images <- array_reshape(test_images, c(10000, 28 * 28))
+test_images <- test_images / 255
+```
+
+```{r testing-set-labels}
+test_labels <- mnist$test$y
+test_labels <- to_categorical(test_labels)
+```
 
 ## Serializing
 
@@ -234,9 +297,7 @@ write(serialize_model(cmp_model), "cmp_model.txt")
 
 What is the probability that the image belongs to one of the 10 different categories?
 
-## Setting Data Aside for Validation
-
-Before you train your model on your dataset, you should to put some of your data aside for the validation process later. We will talk in more detail about that, otherwise it's just too many concepts to keep track of in the short term memory banks.
+## The Training Loop
 
 fit - train model for fixed number of iterations, returns a "history" object with all info collected during training
 
@@ -257,17 +318,6 @@ Different methods/approaches.
 Sample approach
 
 K-test approach
-
-```{r testing-set-images}
-test_images <- mnist$test$x
-test_images <- array_reshape(test_images, c(10000, 28 * 28))
-test_images <- test_images / 255
-```
-
-```{r testing-set-labels}
-test_labels <- mnist$test$y
-test_labels <- to_categorical(test_labels)
-```
 
 What does evaluate do?
 
