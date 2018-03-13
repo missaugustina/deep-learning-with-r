@@ -15,6 +15,8 @@ library(keras)
 
 Can we identify single digit numbers from hand-writing?
 
+We need to simplify this for our model, as is typical when testing a hypothesis. The question we have for this experiment is "What number is in this picture?"
+
 In this example, we are essentially testing the results of another research effort ^[[Y. LeCun, L. Bottou, Y. Bengio, and P. Haffner. "Gradient-based learning applied to document recognition." Proceedings of the IEEE, 86(11):2278-2324, November 1998.(http://yann.lecun.com/exdb/publis/index.html#lecun-98)]. 
 
 # The Data - MNIST (Modified National Institute of Standards and Technology) database
@@ -31,11 +33,17 @@ mnist <- dataset_mnist()
 
 ## What's in it?
 
-![Josef Steppan - Own work, CC BY-SA 4.0, https://commons.wikimedia.org/w/index.php?curid=64810040](img/MnistExamples.png)
+We have 2 lists, a set of images and a set of labels. The labels map to the images in a 1:1 relationship. That is, the label's index matches the image's index. Our machine will "learn" by looking for similarities between items that have the same label (called "features").
+
+An annotated dataset is one that has labeled content depending on what our end goal is. In this case, the annotations have already been parsed into a structured dataset for our program to consume, but often you'll need to do this parsing yourself. R has some handy tools for streamlining this process (see package `tfdatasets`).
 
 ```{r}
-str(mnist)
+str(mnist$train)
 ```
+
+![Josef Steppan - Own work, CC BY-SA 4.0, https://commons.wikimedia.org/w/index.php?curid=64810040](img/MnistExamples.png)
+
+You might notice our dataset contains 2 lists, train and test. Each is the exact same structure but contains different data. We'll talk about why later. 
 
 ## How do we cite it?
 
@@ -51,14 +59,20 @@ Why do you think citing your data sources is important?
 
 # Data Format
 
-We have two lists, labels and images. Labels and images have a 1:1 mapping.
+Before we can do the deep learnings, we must format our data into something our model can process for comparison. Remember, the model needs to discover what's similar between things that have the same label. Our data needs to match what's required for the function (or mathmatical equation) that will be used to do this comparison
+
+## Making a Tensor
+
+We have two lists, labels and images. Labels and images have a 1:1 mapping. 
+
+Our end goal is to connect the labels to the images.
 
 ```{r}
 train_images <- mnist$train$x
 train_labels <- mnist$train$y
 ```
 
-When dealing with most data, the lists need to be vectorized into a binary matrix, aka a Tensor. 
+We will to be vectorize the lists into a binary matrix, aka a Tensor. 
  
 What kind of Tensor are we using?
 
@@ -86,29 +100,18 @@ digit <- train_images[digit_index,,] # <- one slice of tensor please :)
 plot(as.raster(digit, max=255))
 ```
 
-To take advantage of the features R Keras offers, our data should be formatted in a way that array_reshape() can work with.
 
 # Data Encoding
 
-A network can't "eat" the data without it being pre-digested. 
-
-3D array - image content, width, height
- * width and height become a single value
- * image content becomes a value between 1 and 255
- 
-We will not discuss the "how" only the "why" so advanced apologies for the hand-waving in place of the actual math. If you want to dig deeper, see the resources mentioned at the end of this notebook.
-
-## Tensor Operations 
-
-Why a single value? Because ultimately we're trying to get to a "gradient". The gradient is the change (curve or interval) of a tensor operation. Basically it's how we contain the many dimensions into a single value. This value represents momentum.
-
-This might be overly simplistic, but if this is a new concept or not intuitive this idea might help. Imagine how you think of someone's age that you've know for awhile. The age is representative of what has been and indicates what might be (eg, lifespan). The age is constantly changing.
-
-We'll talk more about this in the next step and even plot what it looks like. For now just understand that the recipe requires this to be a single value so it can do it's deep learning black magic (the Tensor dot product!).
-
 ## Tensor Reshaping
 
-Rearranging the data into something that can be used in Tensor Operations
+To take advantage of the features R Keras offers, our data should be formatted in a way that the `array_reshape()` function can work with. Our end goal is something that can be used for Tensor Operations.
+
+How of you know what shape you need? Generally you can follow the guidelines based on the nature of your question. In this case, we are following a basic "recipe" for image recognition.
+
+We have a 3D array containing image content, width, height
+ 1. Convert width and height into a single value
+ 1. Convert the image content into value between 1 and 255
 
 ## One Hot Encoding
 
@@ -121,7 +124,9 @@ train_images <- array_reshape(train_images, c(60000, 28 * 28))
 train_images <- train_images / 255
 ```
 
-We also need to categorically encode the labels:
+## Labels
+
+We've encoded the images, but also need to categorically encode the labels so the model knows how to bucket things. We will be using the `categorical_crossentropy()` loss function (discussed in the next section), so this method is dictated to us as part of our image recognition recipe. For more information, look at the help entry for `r ?to_categorical`.
 
 ```{r}
 train_labels <- to_categorical(train_labels)
@@ -131,9 +136,13 @@ What format does training data generally need to be in? This depends on your que
 
 # The Model (aka Network)
 
-The next step in this process is to define our question in terms the model can understand. To do this we'll use layer functions where each layer function will perform a mathmatical transformation on the dataset and provide a result in a format that lets us "answer" our question.
+A model in Keras is a directed acyclic graph of layers. A graph can also be thought of a network or a map of interconnected points. The connections are "weights" that indicate how each point is related to each other.
 
-So our question is, "Can we identify single digit numbers from hand-writing?" We need to simplify this for our model, as is typical when testing hypothesis. The question we have for the model is "What number is in this picture?"
+![Example of what a graph looks like](img/graph_example.png)
+
+The state of the graph (or rather the weights of the connections) are updated as it is trained.
+
+To define our question in terms the model can understand, we'll use layer functions. Each layer function will perform a mathmatical transformation on the dataset and provide a result in a format that lets us "answer" our question. Again, this is dependent on the type of question. In our case we want the model to tell us if an image contains a particular digit.
 
 Models, however, are not going to give us a simple yes or no. Think of it more like a Zen Guru. The final output the model will provide is, given all of the categories, here's the probability that the number is in this picture. It's up to us to interpret the results.
 
@@ -147,25 +156,47 @@ model <- keras_model_sequential() %>% # initialize our model using a pre-baked m
 
 ## keras_model_sequential
 
-Pre-baked models
+R keras provides some "pre-baked" models (much like using a pre-made ingredient instead of cooking everything from scratch). If we look at the help entry, it tells us our model is composed of a linear stack of layers.
+
+By using this function, R keras will send the configuration options to Keras and ultimately Tensorflow so we don't have to fiddle with it.
+
+`r ?keras_model_sequential`
 
 ## Layers
 
 What are layers?
 
-Layers are representations of the data that will be chained together for the deep learnings. As each layer function is applied to the dataset, the result then goes to the next layer function we've defined. 
+Layers are representations of the data that will be chained together for the deep learnings. Remember the connections in the graph? That's essentially what the layer function is building. As each layer function is applied to the dataset, the result then goes to the next layer function we've defined. 
 
-Ultimately, we want to get from many parameters to a set of probabilities. This is where the black magic happens and this complex data transformation is why transparency in deep learning is challenging.
-
-### Types of Layers
-
-layer_dense vs layer_conv_2d
+Ultimately, we want to get from many parameters to a set of probabilities. This data transformation can get pretty complex and it is one of the reasons why transparency in deep learning is challenging.
  
+We will not discuss the "how" only the "why" so advanced apologies for the hand-waving in place of the actual math. If you want to dig deeper, see the resources mentioned at the end of this notebook.
+
  * units
  * activation
  * input_shape
 
-## Relu
+### Types of Layers
+
+For image perception problems, two layer types we'll discuss are "dense" and "convnet" ^[not to be confused with convents, totally different thing... that was a joke ;)].
+
+The `layer_dense()` function indicates we are using "dense" layers. Dense layers are intended to process vectors with no specific structure to the input features. The units of a dense later are all connected and the layer function attempts to map relationships between any features.
+
+The key difference between a dense layer and a 2D convolution layer is that the convolution layer additionally learns "local" patterns of features, rather than considering all of them each iteration.
+
+The advantage to using a Convnet is we can see how the image perception was transformed over time. We'll take a look at that after we finish training our first example. The takeaway here is there are many types of layers that dictate how we need the data transformed so the model can answer our question. It's up to you to find the best approach depending on the nature of your question.
+
+## Tensor Operations 
+
+When our model does its magic, it will reduce many values into a single value.
+
+Why a single value? Because ultimately we're trying to get to a "gradient". The gradient is the change (curve or interval) of a tensor operation. Basically it's how we contain the many dimensions into a single value. This value represents momentum.
+
+This might be overly simplistic, but if this is a new concept or not intuitive this idea might help. Imagine how you think of a bicycle in motion. As it goes from point A to point B its speed changes slightly. A "gradient" is a way of describing, in a single value, how the speed changed over time as the bicycle went from point A to point B.
+
+We'll plot what this looks like after we've done the training so it makes more sense.
+
+### Relu
 
 Relu performs operations on each entry of the tensors being considered and takes the maximum value.
 
@@ -178,6 +209,8 @@ What are the pieces?
  * "W" and "b" are Weights
  * W = kernel
  * b = bias
+ 
+By "weights" we mean the features that affect the output, or in our case the probability that our image matches a particular label. The goal of our model is to pick out the features within the image data that appear to be tied to a matching label so it can tell us with a high degree of certainty whether an image contains a particular number.
  
 Initially these are random but future iterations will adjust based on the result of a feedback function we'll discuss in the next section.
 
@@ -196,16 +229,13 @@ basic_relu <- function(my_2d_tensor) {
 ```
 
 
-## Softmax
+### The Final Transformation
 
-The final layer uses a different transformation than the rest of them.
+The final layer uses a different transformation than the rest of them. This is our "last layer activation" and it transforms the model representation into something that we can use to answer our question. 
 
-## Another Thing to Try
+We are using `softmax` because it goes with the `categorical_crossentropy` loss function. 
 
-Internally, R provides a special set of optimized functions for array operations like the ones used for relu. These are implemented using "BLAS" (Basic Linear Algebra Subprograms). 
-
-Once we've run through the example using relu, can you tweak it to use BLAS instead? Do you see any improvements?
-
+The type activation you use at this point is dictated by the type of question your experiment is exploring!
 
 ## Compile
 
@@ -231,17 +261,17 @@ model %>% compile(
 
 ## Optimizer
 
-You can see a list of available optimizers in R keras by searching the Help for "optimizer_"
+The optimizer determines the rate at which the model learns. You can see a list of available optimizers in R keras by searching the Help for "optimizer_".
 
-RMSProp
+We'll use `RMSProp`
 
 ## Loss Function
 
-categorical_crossentropy
+`categorical_crossentropy` is the loss function used as the feedback signal for learning the weight tensors. This method is used when each sample (or image in this case) has exactly one class it can belong to. That is, in our set, an image can only be ONE of the 9 digits, it can't be both. The loss function you use will be dictated by the nature of your question!
 
 ## Metrics
 
-accuracy
+We're going to use "accuracy".
 
 ## Setting Something Aside
 
@@ -262,9 +292,9 @@ test_labels <- mnist$test$y
 test_labels <- to_categorical(test_labels)
 ```
 
-## Serializing
+## So What Have We Got?
 
-This isn't a necessary step but it's kind of neat to "see" what the model looks like.
+The model we've built is a small covnet. It is a stack of alternated 2d layers with relu activation.
 
 By default the model will print layer metadata.
 ```{r}
@@ -284,6 +314,29 @@ We can also get the weights.
 get_weights(model)
 ```
 
+More information on saving your model to a text file is discussed further on.
+
+# Train 
+
+What is the probability that the image belongs to one of the 10 different categories?
+
+The `fit()` function is how we'll trigger the training loop. It trains model for fixed number of iterations and it returns a "history" object with all info collected during training.
+
+```{r, echo=TRUE, results='hide'}
+history <- model %>% fit(train_images, train_labels, epochs = 5, batch_size = 128)
+```
+
+## The Training Loop
+
+ 1. Get a batch of images and the corresponding labels
+ 1. Run the layer function on the images to obtain predictions on whether the image matches the label
+ 1. Compute the loss by looking at the rate of mismatch between the image and the label
+ 1. Update the weights (how things are interconnected/related) to reduce the loss
+
+## Saving the Model
+
+There are many ways to save your model. It's usually a good idea to save it after training for evaluation. You can also include it in your Github repo where you've saved your research notebook!
+
 You can save it in human-readable form using either YAML or JSON.
 
 ```{r}
@@ -299,30 +352,12 @@ cmp_model <- model
 write(serialize_model(cmp_model), "cmp_model.txt")
 ```
 
-## So What Have We Got?
+You can also explicitely save it as HDF5
 
-The model we've built is a small covnet. It is sa stack of alternated 2d layers with relu activation
-
-# Train 
-
-What is the probability that the image belongs to one of the 10 different categories?
-
-## The Training Loop
-
-fit - train model for fixed number of iterations, returns a "history" object with all info collected during training
-
-```{r, echo=TRUE, results='hide'}
-history <- model %>% fit(train_images, train_labels, epochs = 5, batch_size = 128)
-```
-
-## Saving the Model
-
-```{r}
+```{r, eval=FALSE}
 save_model_hdf5()
-
 save_model_weights_hdf5()
 ```
-
 
 # Validation
 
@@ -330,15 +365,9 @@ save_model_weights_hdf5()
 
 You typically don't want to test your model on the same data its already been trained on. You can think of this as the "control group". That said, there are methods that can be used when the test set and the training set overlap or are the same.
 
-Set some aside for later. In this case, the dataset already had samples set aside for testing. Normally you will need to make a decision early on and pull those samples out before your training run.
+### Set Some Data Aside 
 
-Different methods/approaches.
-
-Sample approach
-
-K-test approach
-
-What does evaluate do?
+In this case, the dataset already had samples set aside for testing. We'll talk about this later, but just know that depending on your testing method, you might need to pull out some samples before your training run.
 
 ```{r}
 metrics <- model %>% evaluate(test_images, test_labels, verbose = 0)
@@ -361,11 +390,58 @@ p 153 -> visualize convnet
 
 # Run the Example
 
+Here are all the steps in one code chunk. Challenge - write comments describing what each line does.
+
+```{r, results='hide'}
+library(keras)
+
+mnist <- dataset_mnist()
+train_images <- mnist$train$x
+train_labels <- mnist$train$y
+test_images <- mnist$test$x
+test_labels <- mnist$test$y
+
+model <- keras_model_sequential() %>% 
+  layer_dense(units = 512, activation = "relu", input_shape = c(28 * 28)) %>% 
+  layer_dense(units = 10, activation = "softmax")
+
+model %>% compile(
+  optimizer = "rmsprop",
+  loss = "categorical_crossentropy",
+  metrics = c("accuracy")
+)
+
+train_images <- array_reshape(train_images, c(60000, 28 * 28))
+train_images <- train_images / 255
+
+test_images <- array_reshape(test_images, c(10000, 28 * 28))
+test_images <- test_images / 255
+
+train_labels <- to_categorical(train_labels)
+test_labels <- to_categorical(test_labels)
+
+history <- model %>% fit(train_images, train_labels, epochs = 5, batch_size = 128)
+
+metrics <- network %>% evaluate(test_images, test_labels, verbose = 0)
+metrics
+```
+
+```{r}
+plot(history)
+```
+
+
 # Next Steps
 
  * use 2d convnet instead of dense (p112) 
+ * visualize the stages of the covnet visualization
 
 # Deepen your Learning
+
+ * [Deep Learning with R by JJ Allaire](https://www.manning.com/books/deep-learning-with-r)
+ * [Deep Learning with R Examples](https://github.com/jjallaire/deep-learning-with-r-notebooks)
+ * [Machine Learning for Humans](https://medium.com/machine-learning-for-humans/why-machine-learning-matters-6164faf1df12)
+ * [Tensorflow Tools for R by RStudio](https://tensorflow.rstudio.com/)
 
 
 
