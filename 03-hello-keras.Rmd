@@ -43,6 +43,7 @@ str(mnist$train)
 
 ![Josef Steppan - Own work, CC BY-SA 4.0, https://commons.wikimedia.org/w/index.php?curid=64810040](img/MnistExamples.png)
 
+
 You might notice our dataset contains 2 lists, train and test. Each is the exact same structure but contains different data. We'll talk about why later. 
 
 ## How do we cite it?
@@ -122,6 +123,8 @@ In this example, we transform it into a double array of shape `(60000, 28 * 28)`
 ```{r}
 train_images <- array_reshape(train_images, c(60000, 28 * 28))
 train_images <- train_images / 255
+
+train_images
 ```
 
 ## Labels
@@ -305,7 +308,7 @@ To see a layer, we can call it by name.
 
 ```{r eval=FALSE}
 # replace the "" with the name of one of the layers printed in the previous step
-get_layer(model, name="")
+get_layer(model, name="dense_31")
 ```
 
 We can also get the weights.
@@ -340,7 +343,7 @@ There are many ways to save your model. It's usually a good idea to save it afte
 You can save it in human-readable form using either YAML or JSON.
 
 ```{r}
-write(model_to_yaml(cmp_model), "cmp_model.yaml")
+write(model_to_yaml(model), "model.yaml")
 ```
 
 The human-readable options for serializing the models don't include all of the information. The serialize_model command actually calls the Keras Python library to get the data that is not immediately available within the R objects.
@@ -422,7 +425,7 @@ test_labels <- to_categorical(test_labels)
 
 history <- model %>% fit(train_images, train_labels, epochs = 5, batch_size = 128)
 
-metrics <- network %>% evaluate(test_images, test_labels, verbose = 0)
+metrics <- model %>% evaluate(test_images, test_labels, verbose = 0)
 metrics
 ```
 
@@ -442,6 +445,7 @@ plot(history)
  * [Deep Learning with R Examples](https://github.com/jjallaire/deep-learning-with-r-notebooks)
  * [Machine Learning for Humans](https://medium.com/machine-learning-for-humans/why-machine-learning-matters-6164faf1df12)
  * [Tensorflow Tools for R by RStudio](https://tensorflow.rstudio.com/)
+ * [DataCamp] <- TODO - add the link to Gabi and Erin's ML course
 
 
 

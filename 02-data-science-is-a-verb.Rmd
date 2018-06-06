@@ -70,6 +70,7 @@ naics_extracts <- extract_tables("downloads/ssti_naics_tech_codes.pdf",
                                   pages=c(4), method="data.frame") %>%
   reduce(bind_rows)
 
+naics_extracts
 ```
 
 
@@ -79,4 +80,5 @@ You should tell a story!
 
 Use complete sentences!
 
-Examples...
+ * [Rpubs](http://rpubs.com)
+ * [Publish a blog](http://rhappy.fun/blog/countering-bean-counting-commits/index.html)

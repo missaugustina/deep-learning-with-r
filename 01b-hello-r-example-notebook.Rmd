@@ -88,7 +88,7 @@ ggplot(meetups, aes(x=state, y=members, fill=is.na(next_event.id))) +
 Wow, California has a lot!
 
 ```{r}
-meetups %>% filter(state=="CA") %>% summarise(sum(members))
+meetups %>% filter(state=="CA") %>% group_by(city) %>% summarise(sum(members))
 ```
 
 What is the age of the meetups?
